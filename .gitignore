@@ -1,0 +1,5 @@
+.env
+node_modules/
+.env
+dbms_log.txt
+server_backup.js

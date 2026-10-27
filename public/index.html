@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Internship &amp; Research Management</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--tx:#1b2430;--mu:#6b7686;--bd:#e1e6ee;--ac:#2f5fd0;--ok:#1f9d55;--wa:#d98a00;--er:#d23a3a}
+@media(prefers-color-scheme:dark){:root{--bg:#10151d;--card:#1a212c;--tx:#e8edf5;--mu:#98a3b3;--bd:#2a3342;--ac:#6b93f2}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{background:var(--card);border-bottom:1px solid var(--bd);padding:12px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+h1{font-size:17px;margin:0;flex:1}nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{border:0;background:none;color:var(--mu);padding:7px 12px;border-radius:7px;cursor:pointer;font:inherit}
+nav button.on{background:var(--ac);color:#fff}main{max-width:1100px;margin:20px auto;padding:0 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:16px;overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.k{font-size:26px;font-weight:700}.mu{color:var(--mu)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--bd)}th{color:var(--mu);font-weight:600;font-size:12px}
+input,select,textarea,button.b{font:inherit;padding:7px 9px;border:1px solid var(--bd);border-radius:7px;background:var(--bg);color:var(--tx)}
+button.b{background:var(--ac);color:#fff;border:0;cursor:pointer}form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--bd);margin:1px;font-size:12px}
+.Met{color:var(--ok)}.Partial{color:var(--wa)}.Missing{color:var(--er)}.bar{height:8px;border-radius:4px;background:var(--bd);overflow:hidden;min-width:120px}.bar i{display:block;height:100%}
+#msg{position:fixed;bottom:16px;right:16px;padding:10px 14px;border-radius:8px;color:#fff;display:none}h2{font-size:15px;margin:0 0 10px}
+</style></head><body>
+<header><h1>Internship &amp; Research Management</h1><nav id="nav"></nav><span id="st" class="mu"></span></header>
+<main id="v"></main><div id="msg"></div>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=v=>/^\d{4}-\d\d-\d\dT/.test(v)?v.slice(0,10):v;
+async function api(p,o){const r=await fetch(p,o&&{method:o.method,headers:{'Content-Type':'application/json'},body:JSON.stringify(o.body)});
+ const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||r.statusText);return j}
+function toast(t,ok=true){const m=$('#msg');m.textContent=t;m.style.background=ok?'var(--ok)':'var(--er)';m.style.display='block';setTimeout(()=>m.style.display='none',3500)}
+const table=rows=>!rows.length?'<p class="mu">No rows yet.</p>':`<table><tr>${Object.keys(rows[0]).map(k=>`<th>${esc(k.replace(/_/g,' '))}</th>`).join('')}</tr>${rows.map(r=>`<tr>${Object.values(r).map(v=>`<td>${esc(fmt(v))}</td>`).join('')}</tr>`).join('')}</table>`;
+const chips=a=>(a||[]).map(s=>`<span class="chip">${esc(s.skill)} · ${esc(s.level)}</span>`).join('')||'<span class="mu">—</span>';
+const opts=(a,v,l)=>a.map(x=>`<option value="${esc(x[v])}">${esc(typeof l==='function'?l(x):x[l])}</option>`).join('');
+const NAV={Dashboard,Students,Internships,Applications,Research,Reports,Readiness};
+$('#nav').innerHTML=Object.keys(NAV).map(n=>`<button onclick="go('${n}')">${n}${n==='Readiness'?' ★':''}</button>`).join('');
+async function go(n){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.textContent.startsWith(n)));
+ try{await NAV[n]()}catch(e){$('#v').innerHTML=`<div class="card">Could not load: ${esc(e.message)}</div>`}}
+async function Dashboard(){const o=await api('/api/overview'),p=o.postgresql;
+ $('#v').innerHTML=`<div class="grid">${[['Students',p.students],['Internships',p.internships],['Applications',p.applications],['Research projects',p.projects]].map(([a,b])=>`<div class="card"><div class="mu">${a}</div><div class="k">${b}</div></div>`).join('')}</div>
+ <div class="card"><h2>PostgreSQL <span class="mu">· ${esc(p.database)}</span></h2><p class="mu">Structured relational data: students, organizations, internships, applications, faculty, research projects.</p></div>
+ <div class="card"><h2>MongoDB <span class="mu">· ${esc(o.mongodb.database)}</span></h2>${table(o.mongodb.collections)}<p class="mu">Flexible documents: required skills per internship, student skill profiles, and generated skill-gap reports.</p></div>`}
+async function Students(){const s=await api('/api/students');
+ $('#v').innerHTML=`<div class="card"><h2>Add student</h2><form id="f"><input name="student_id" placeholder="STU-2024-0001" required pattern="STU-[0-9]{4}-[0-9]{4}"><input name="full_name" placeholder="Full name" required>
+ <input name="department" placeholder="Department" required><input name="cgpa" type="number" step="0.01" min="0" max="10" placeholder="CGPA" required><input name="email" type="email" placeholder="Email" required><button class="b">Add</button></form></div>
+ <div class="card"><h2>Skills (stored in MongoDB)</h2><form id="g"><select id="ss">${opts(s,'student_id',x=>x.full_name)}</select><input id="sk" size="46" placeholder="Python:Advanced, SQL:Intermediate"><button class="b">Save skills</button></form>
+ <p class="mu">Levels: Beginner, Intermediate, Advanced, Expert</p></div>
+ <div class="card"><h2>Students</h2><table><tr><th>ID</th><th>Name</th><th>Department</th><th>CGPA</th><th>Skills</th></tr>${s.map(x=>`<tr><td>${esc(x.student_id)}</td><td>${esc(x.full_name)}</td><td>${esc(x.department)}</td><td>${esc(x.cgpa)}</td><td>${chips(x.skills)}</td></tr>`).join('')}</table></div>`;
+ $('#f').onsubmit=async e=>{e.preventDefault();try{await api('/api/students',{method:'POST',body:Object.fromEntries(new FormData(e.target))});toast('Student added');Students()}catch(x){toast(x.message,false)}};
+ $('#g').onsubmit=async e=>{e.preventDefault();const skills=$('#sk').value.split(',').map(t=>t.split(':').map(z=>z.trim())).filter(t=>t[0]).map(([skill,level])=>({skill,level:level||'Intermediate'}));
+  try{await api(`/api/students/${$('#ss').value}/skills`,{method:'PUT',body:{skills}});toast('Skills saved to MongoDB');Students()}catch(x){toast(x.message,false)}}}
+async function Internships(){const [i,s]=await Promise.all([api('/api/internships'),api('/api/students')]);
+ $('#v').innerHTML=`<div class="card"><h2>Apply for an internship</h2><form id="f"><select name="student_id">${opts(s,'student_id','full_name')}</select><select name="internship_id">${opts(i,'internship_id',x=>x.title+' — '+x.organization)}</select><button class="b">Apply</button></form></div>
+ <div class="card"><h2>Open internships</h2><table><tr><th>Title</th><th>Organization</th><th>Mode</th><th>Stipend</th><th>Seats</th><th>Deadline</th><th>Applicants</th><th>Required skills (MongoDB)</th></tr>
+ ${i.map(x=>`<tr><td>${esc(x.title)}</td><td>${esc(x.organization)}</td><td>${esc(x.mode)}</td><td>${esc(x.stipend??'Unpaid')}</td><td>${x.open_seats}</td><td>${esc(fmt(x.application_deadline))}</td><td>${x.applications}</td><td>${chips(x.required_skills)}</td></tr>`).join('')}</table></div>`;
+ $('#f').onsubmit=async e=>{e.preventDefault();try{await api('/api/applications',{method:'POST',body:Object.fromEntries(new FormData(e.target))});toast('Application submitted');Internships()}catch(x){toast(x.message,false)}}}
+const FLOW={Submitted:['Under Review','Withdrawn'],'Under Review':['Shortlisted','Rejected','Withdrawn'],Shortlisted:['Selected','Rejected','Withdrawn']};
+async function Applications(){const a=await api('/api/applications');
+ $('#v').innerHTML=`<div class="card"><h2>Applications</h2><p class="mu">Coordinator view: move an application along Submitted → Under Review → Shortlisted → Selected/Rejected.</p><table><tr><th>Student</th><th>Internship</th><th>Organization</th><th>Status</th><th>Change status</th></tr>
+ ${a.map(x=>`<tr><td>${esc(x.student)}</td><td>${esc(x.internship)}</td><td>${esc(x.organization)}</td><td>${esc(x.status)}</td><td>${(FLOW[x.status]||[]).map(n=>`<button class="b" onclick="setS(${x.application_id},'${n}')">${n}</button>`).join(' ')||'<span class="mu">final</span>'}</td></tr>`).join('')}</table></div>`}
+async function setS(id,status){try{await api(`/api/applications/${id}/status`,{method:'PATCH',body:{status}});toast('Status updated');Applications()}catch(x){toast(x.message,false)}}
+async function Research(){const p=await api('/api/projects');
+ $('#v').innerHTML=p.map(x=>`<div class="card"><h2>${esc(x.title)} <span class="chip">${esc(x.status)}</span></h2><p class="mu">Lead: ${esc(x.lead_supervisor)} · ${esc(fmt(x.start_date))} → ${esc(fmt(x.expected_end_date))}</p>
+ ${x.participants.map(q=>`<span class="chip">${esc(q.name)} · ${esc(q.role)}</span>`).join('')||'<span class="mu">No participants</span>'}</div>`).join('')||'<div class="card">No projects yet.</div>'}
+async function Reports(){const n=await api('/api/reports');
+ $('#v').innerHTML=`<div class="card"><h2>SQL reports</h2><select id="r">${n.map(x=>`<option>${esc(x)}</option>`).join('')}</select></div><div class="card" id="o"></div>`;
+ const run=async()=>{$('#o').innerHTML=`<h2>${esc($('#r').value)}</h2>`+table(await api('/api/reports/'+encodeURIComponent($('#r').value)))};$('#r').onchange=run;run()}
+async function Readiness(){const s=await api('/api/students');
+ $('#v').innerHTML=`<div class="card"><h2>Internship readiness &amp; skill-gap analysis</h2><p class="mu">Cross-database report: internships from <b>PostgreSQL</b> are compared with required skills and the student's skill profile from <b>MongoDB</b>. Each score is explained skill by skill, and the report is saved to MongoDB.</p>
+ <select id="r">${opts(s,'student_id',x=>x.full_name)}</select></div><div id="o"></div>`;
+ const run=async()=>{const d=await api('/api/readiness/'+$('#r').value);
+  $('#o').innerHTML=d.results.map(x=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:12px"><b>${esc(x.title)} <span class="mu">· ${esc(x.organization)}</span></b><b>${x.readiness}%</b></div>
+  <div class="bar"><i style="width:${x.readiness}%;background:${x.readiness>=75?'var(--ok)':x.readiness>=40?'var(--wa)':'var(--er)'}"></i></div>
+  <table><tr><th>Skill</th><th>Required</th><th>Student has</th><th>Result</th></tr>${x.breakdown.map(b=>`<tr><td>${esc(b.skill)}</td><td>${esc(b.required)}</td><td>${esc(b.student_level)}</td><td class="${b.status}">${b.status}</td></tr>`).join('')||'<tr><td colspan="4" class="mu">No requirements recorded</td></tr>'}</table></div>`).join('')};
+ $('#r').onchange=run;run()}
+api('/health').then(h=>$('#st').textContent='● PostgreSQL + MongoDB connected').catch(()=>$('#st').textContent='● database offline');go('Dashboard');
+</script></body></html>
