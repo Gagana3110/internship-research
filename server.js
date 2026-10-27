@@ -92,6 +92,29 @@ app.get('/api/readiness/:sid', wrap(async (req, res) => { const sid = req.params
   await mdb.collection('skill_gap_reports').updateOne({ student_id: sid }, { $set: { student_id: sid, generated_at: new Date(), results } }, { upsert: true });
   res.json({ student: s, results }); }));
 
+// MongoDB aggregation pipelines
+const AGG = {
+  'skill-demand': () => mdb.collection('internship_details').aggregate([
+    { $unwind: '$required_skills' },
+    { $group: { _id: '$required_skills.skill', internships_requiring: { $sum: 1 }, levels: { $addToSet: '$required_skills.level' } } },
+    { $sort: { internships_requiring: -1, _id: 1 } },
+    { $project: { _id: 0, skill: '$_id', internships_requiring: 1, levels_asked: '$levels' } }]).toArray(),
+  'skill-gap': () => mdb.collection('internship_details').aggregate([       // demand vs supply across campus
+    { $unwind: '$required_skills' },
+    { $group: { _id: { $toLower: '$required_skills.skill' }, skill: { $first: '$required_skills.skill' }, demand: { $sum: 1 } } },
+    { $lookup: { from: 'student_profiles', let: { s: '$_id' }, pipeline: [
+        { $unwind: '$skills' }, { $match: { $expr: { $eq: [{ $toLower: '$skills.skill' }, '$$s'] } } }, { $count: 'n' }], as: 'supply' } },
+    { $project: { _id: 0, skill: 1, internships_requiring: '$demand', students_with_skill: { $ifNull: [{ $first: '$supply.n' }, 0] } } },
+    { $addFields: { shortage: { $subtract: ['$internships_requiring', '$students_with_skill'] } } },
+    { $sort: { shortage: -1, skill: 1 } }]).toArray(),
+  'common-gaps': () => mdb.collection('skill_gap_reports').aggregate([     // from saved readiness reports
+    { $unwind: '$results' }, { $unwind: '$results.breakdown' },
+    { $match: { 'results.breakdown.status': { $in: ['Missing', 'Partial'] } } },
+    { $group: { _id: '$results.breakdown.skill', students: { $addToSet: '$student_id' }, times_flagged: { $sum: 1 } } },
+    { $project: { _id: 0, skill: '$_id', students_affected: { $size: '$students' }, times_flagged: 1 } },
+    { $sort: { times_flagged: -1 } }]).toArray() };
+app.get('/api/mongo/:name', wrap(async (req, res) => { const f = AGG[req.params.name]; if (!f) throw fail(404, 'Unknown report'); res.json(await f()); }));
+
 (async () => { try {
   await pg.query('SELECT 1'); console.log('PostgreSQL connected');
   await mc.connect(); mdb = mc.db(process.env.MONGODB_DATABASE); await mdb.command({ ping: 1 }); console.log('MongoDB connected');

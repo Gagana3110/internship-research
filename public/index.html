@@ -58,9 +58,11 @@ async function setS(id,status){try{await api(`/api/applications/${id}/status`,{m
 async function Research(){const p=await api('/api/projects');
  $('#v').innerHTML=p.map(x=>`<div class="card"><h2>${esc(x.title)} <span class="chip">${esc(x.status)}</span></h2><p class="mu">Lead: ${esc(x.lead_supervisor)} · ${esc(fmt(x.start_date))} → ${esc(fmt(x.expected_end_date))}</p>
  ${x.participants.map(q=>`<span class="chip">${esc(q.name)} · ${esc(q.role)}</span>`).join('')||'<span class="mu">No participants</span>'}</div>`).join('')||'<div class="card">No projects yet.</div>'}
+const NOSQL={'Skill demand across internships':'skill-demand','Campus skill demand vs supply':'skill-gap','Most common skill gaps (from readiness reports)':'common-gaps'};
 async function Reports(){const n=await api('/api/reports');
- $('#v').innerHTML=`<div class="card"><h2>SQL reports</h2><select id="r">${n.map(x=>`<option>${esc(x)}</option>`).join('')}</select></div><div class="card" id="o"></div>`;
- const run=async()=>{$('#o').innerHTML=`<h2>${esc($('#r').value)}</h2>`+table(await api('/api/reports/'+encodeURIComponent($('#r').value)))};$('#r').onchange=run;run()}
+ $('#v').innerHTML=`<div class="card"><h2>Reports</h2><select id="r"><optgroup label="SQL (PostgreSQL)">${n.map(x=>`<option value="sql:${esc(x)}">${esc(x)}</option>`).join('')}</optgroup><optgroup label="Aggregation (MongoDB)">${Object.keys(NOSQL).map(x=>`<option value="mongo:${NOSQL[x]}">${esc(x)}</option>`).join('')}</optgroup></select></div><div class="card" id="o"></div>`;
+ const run=async()=>{const v=$('#r').value,i=v.indexOf(':'),t=v.slice(0,i),k=v.slice(i+1);
+  $('#o').innerHTML=`<h2>${esc($('#r').selectedOptions[0].textContent)} <span class="chip">${t==='sql'?'PostgreSQL':'MongoDB'}</span></h2>`+table(await api(t==='sql'?'/api/reports/'+encodeURIComponent(k):'/api/mongo/'+k))};$('#r').onchange=run;run()}
 async function Readiness(){const s=await api('/api/students');
  $('#v').innerHTML=`<div class="card"><h2>Internship readiness &amp; skill-gap analysis</h2><p class="mu">Cross-database report: internships from <b>PostgreSQL</b> are compared with required skills and the student's skill profile from <b>MongoDB</b>. Each score is explained skill by skill, and the report is saved to MongoDB.</p>
  <select id="r">${opts(s,'student_id',x=>x.full_name)}</select></div><div id="o"></div>`;
