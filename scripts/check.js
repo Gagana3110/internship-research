@@ -1,0 +1,11 @@
+const fs = require('fs');
+const vm = require('vm');
+const { execFileSync } = require('child_process');
+const path = require('path');
+const root = path.join(__dirname, '..');
+execFileSync(process.execPath, ['--check', path.join(root, 'server.js')], { stdio: 'inherit' });
+const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
+const match = html.match(/<script>([\s\S]*?)<\/script>/i);
+if (!match) throw new Error('No inline frontend script found in public/index.html');
+new vm.Script(match[1], { filename: 'public/index.html inline script' });
+console.log('Syntax checks passed: server.js and public/index.html inline JavaScript.');
