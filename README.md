@@ -99,12 +99,3 @@ Read `docs/ER_DIAGRAM.md` for the ER diagram and `docs/PROJECT_REPORT.md` for th
 ## Git workflow
 
 Before committing, run `git status` and confirm `.env` is ignored. Commit only project files, not credentials, `node_modules`, local database dumps, or screenshots containing secrets. Use your own Git identity and commit only the work you actually performed. Push to a branch and open a pull request if that is your team's workflow.
-
-## Team contributions
-
-Fill this table with the **actual** work each person completed before submission; do not claim work that was not performed or verified.
-
-| Member | Actual contributions (complete before submission) |
-|---|---|
-| Dhyeya Aneesh | To be confirmed by the team; list only work personally implemented, tested, and committed. |
-| Gagana (confirm full name) | To be confirmed by the team; list only work personally implemented, tested, and committed. |
