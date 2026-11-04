@@ -51,9 +51,12 @@ app.get('/health', wrap(async (req, res) => { const [d] = await q('SELECT curren
 app.get('/api/overview', wrap(async (req, res) => {
   const [c] = await q(`SELECT (SELECT COUNT(*) FROM student)::int students, (SELECT COUNT(*) FROM internship)::int internships,
     (SELECT COUNT(*) FROM application)::int applications, (SELECT COUNT(*) FROM research_project)::int projects`);
+  const applicationStatuses = await q(`SELECT status, COUNT(*)::int AS total
+    FROM application GROUP BY status ORDER BY status`);
   const collections = await Promise.all(['internship_details', 'student_profiles', 'skill_gap_reports']
     .map(async name => ({ name, documents: await mdb.collection(name).countDocuments() })));
-  res.json({ postgresql: { database: process.env.PGDATABASE, ...c }, mongodb: { database: mdb.databaseName, collections } }); }));
+  res.json({ postgresql: { database: process.env.PGDATABASE, ...c, applicationStatuses },
+    mongodb: { database: mdb.databaseName, collections } }); }));
 
 app.get('/api/students', wrap(async (req, res) => {
   const rows = req.user.role === 'Admin' ? await q('SELECT student_id, full_name, department, cgpa, email FROM student WHERE is_active IS DISTINCT FROM false ORDER BY full_name') : await q('SELECT student_id, full_name, department, cgpa, email FROM student WHERE student_id=$1 AND is_active IS DISTINCT FROM false', [req.user.student_id]);

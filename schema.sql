@@ -70,10 +70,13 @@ CREATE TABLE application (                                                      
     internship_id   INT          NOT NULL REFERENCES internship(internship_id) ON DELETE RESTRICT,
     status          VARCHAR(15)  NOT NULL DEFAULT 'Submitted',
     applied_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    CONSTRAINT chk_app_status CHECK (status IN ('Submitted','Under Review','Shortlisted',
-                                                'Selected','Rejected','Withdrawn')),
-    CONSTRAINT uq_student_internship UNIQUE (student_id, internship_id)         -- one application each
+        CONSTRAINT chk_app_status CHECK (status IN ('Submitted','Under Review','Shortlisted',
+                                                'Selected','Rejected','Withdrawn'))
 );
+
+CREATE UNIQUE INDEX uq_student_internship_active
+ON application (student_id, internship_id)
+WHERE status <> 'Withdrawn';
 
 CREATE TABLE research_participation (                                           -- Participates (M:N)
     participation_id  SERIAL       PRIMARY KEY,

@@ -16,6 +16,12 @@ button.b{background:var(--ac);color:#fff;border:0;cursor:pointer}form{display:fl
 .chip{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--bd);margin:1px;font-size:12px}
 .Met{color:var(--ok)}.Partial{color:var(--wa)}.Missing{color:var(--er)}.bar{height:8px;border-radius:4px;background:var(--bd);overflow:hidden;min-width:120px}.bar i{display:block;height:100%}
 #msg{position:fixed;bottom:16px;right:16px;padding:10px 14px;border-radius:8px;color:#fff;display:none}h2{font-size:15px;margin:0 0 10px}
+.chart-list{display:grid;gap:13px;margin-top:16px}.chart-row{display:grid;grid-template-columns:125px minmax(80px,1fr) 34px;gap:12px;align-items:center}
+.chart-label{color:var(--mu);font-size:13px}.chart-track{height:13px;border-radius:99px;background:var(--bg);border:1px solid var(--bd);overflow:hidden}
+.chart-fill{height:100%;border-radius:99px;min-width:0;transition:width .35s ease}
+.chart-value{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.chart-note{font-size:12px;color:var(--mu);margin-top:14px}
+@media(max-width:520px){.chart-row{grid-template-columns:100px minmax(55px,1fr) 25px;gap:8px}}
 </style></head><body>
 <header><h1>Internship &amp; Research Management</h1><nav id="nav"></nav><span id="st" class="mu"></span></header>
 <main id="v"></main><div id="msg"></div>
@@ -36,7 +42,14 @@ async function logout(){try{await api('/api/auth/logout',{method:'POST',body:{}}
 async function go(n){if(!currentUser)return authScreen(false);document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.textContent.startsWith(n)));if(currentUser.role!=='Admin'&&['Students','Reports'].includes(n))return go('Dashboard');
  try{await NAV[n]()}catch(e){$('#v').innerHTML=`<div class="card">Could not load: ${esc(e.message)}</div>`}}
 async function Dashboard(){const o=await api('/api/overview'),p=o.postgresql;
+ const statuses=['Submitted','Under Review','Shortlisted','Selected','Rejected','Withdrawn'];
+ const statusColors={'Submitted':'#6b93f2','Under Review':'#8b7cf6','Shortlisted':'#d6a34a','Selected':'#2ca66f','Rejected':'#d45d68','Withdrawn':'#8993a3'};
+ const counts=Object.fromEntries((p.applicationStatuses||[]).map(x=>[x.status,Number(x.total)]));
+ const maxStatus=Math.max(1,...statuses.map(x=>counts[x]||0));
+ const chart=statuses.map(name=>{const count=counts[name]||0;const width=count?Math.max(3,count/maxStatus*100):0;
+  return `<div class="chart-row"><span class="chart-label">${esc(name)}</span><div class="chart-track" role="img" aria-label="${esc(name)}: ${count} applications"><div class="chart-fill" style="width:${width}%;background:${statusColors[name]}"></div></div><span class="chart-value">${count}</span></div>`}).join('');
  $('#v').innerHTML=`<div class="grid">${[['Students',p.students],['Internships',p.internships],['Applications',p.applications],['Research projects',p.projects]].map(([a,b])=>`<div class="card"><div class="mu">${a}</div><div class="k">${b}</div></div>`).join('')}</div>
+ <div class="card"><h2>Applications by Status</h2><p class="mu">Live breakdown of all applications across the system.</p><div class="chart-list">${chart}</div><p class="chart-note">Counts are fetched directly from PostgreSQL and refresh whenever the dashboard is opened.</p></div>
  <div class="card"><h2>PostgreSQL <span class="mu">· ${esc(p.database)}</span></h2><p class="mu">Structured relational data: students, organizations, internships, applications, faculty, research projects.</p></div>
  <div class="card"><h2>MongoDB <span class="mu">· ${esc(o.mongodb.database)}</span></h2>${table(o.mongodb.collections)}<p class="mu">Flexible documents: required skills per internship, student skill profiles, and generated skill-gap reports.</p></div>`}
 async function Students(){const s=await api('/api/students');
